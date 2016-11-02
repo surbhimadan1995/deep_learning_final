@@ -19,7 +19,7 @@ def read_data(file_name):
         docs = f.readlines()
     return docs 
 
-def basic_tokenizer(sentence, word_split=re.compile("([.,!?\"':;)(])")):
+def basic_tokenizer(sentence, word_split=re.compile("([.,!?\"':;)(])"))
     '''
     Source: Sidd, Piazza
     Very basic tokenizer: split the sentence into a list of tokens, lowercase.
@@ -68,12 +68,18 @@ def clean_html(html):
     cleaned = re.sub(r'  ', ' ', cleaned)
     return cleaned.strip()
 
+   
+'''NOTES TO SELF
+# return counts
+# return dictionary (word -> integer)
+# return list of docs of list of sentences of list of words
+'''
 NUMBER = 'NUMBER'
 SYMBOL = 'SYMBOL'
 STOP = 'STOP'
 UNKNOWN = 'UNKNOWN'
 PUNCTUATION_LIST = ['.', '!', '?']
-SYMBOL_LIST = ['(', '[', ',', '\"', '\'', ':', ';', ')', ']']
+SYMBOL_LIST = ['(', '[', ',', '\"', '\'', ':', ';', ')', '(', ']', ')']
 
 '''
 Args:
@@ -87,8 +93,8 @@ Returns:
 def final_clean(initial_counts, tokenized_docs):
     final_counts = defaultdict(lambda: 0)
     documents_to_return = []
-    for doc in tokenized_docs:
-        sentence_to_return = [STOP] # can get rid of stop, just make this not contain a STOP
+    for doc in tokenized_doc:
+        sentence_to_return = [STOP]
         for word in doc:
             if word.isdigit():
                 word = NUMBER
@@ -100,27 +106,14 @@ def final_clean(initial_counts, tokenized_docs):
             final_counts[word] += 1
             sentence_to_return.append(word)
             if word in PUNCTUATION_LIST:
-                sentence_to_return.append(STOP) # can get rid of stop, just make this not add a STOP
+                sentence_to_return.append(STOP)
                 documents_to_return.append(sentence_to_return)
-                sentence_to_return = [STOP] # can get rid of stop, just make this not contain a STOP
-
-    # print(len(final_counts)) vocab size is 29324
+                sentence_to_return = []
     return (documents_to_return, final_counts)
 
 
-'''
-Args:
-    file_names - list of file names where each file contains movie reviews on each line
-
-Returns:
-    (list of documents, dictionary of words to # occurrences)
-        * where each document is a list of sentences
-        * where each sentence is a list of words
-'''
-def process(file_names):
-    docs = []
-    for file_name in file_names:
-        docs  = docs + read_data(file_name)
+def process(file_name):
+    docs = read_data(file_name)
     html_free_docs = strip_html(docs)
     tokenized_docs = [basic_tokenizer(review) for review in html_free_docs]
     initial_counts = defaultdict(lambda: 0)
@@ -129,8 +122,6 @@ def process(file_names):
 
 if __name__=='__main__':
     if len(sys.argv) <= 1:
-        sys.exit('Usage: python3 batch.py <file_name> ...')
-    file_names = []
-    for i in range(1, len(sys.argv)):
-        file_names.append(sys.argv[i])
-    process(file_names)
+        sys.exit('Usage: python3 batch.py <file_name>')
+    file_name = sys.argv[1]
+    print(process(file_name))
