@@ -17,14 +17,14 @@ import re
 def read_data(file_name):
     with open(file_name) as f:
         docs = f.readlines()
-    return docs 
+    return docs
 
 
 """
 Args:
     docs - list of strings to clean
 
-Returns 
+Returns
     html_free_docs - list of strings devoid of html markup
 """
 def strip_html(docs):
@@ -65,6 +65,3 @@ if __name__=='__main__':
     file_name = sys.argv[1]
     docs = read_data(file_name)
     html_free_docs = strip_html(docs)
-
-
-
