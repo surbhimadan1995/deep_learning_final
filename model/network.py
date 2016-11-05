@@ -1,7 +1,7 @@
 import tensorflow as tf
 import batch
 
-fname_pos = '../train_pos.txt'
+fname_pos = '../data/train_pos.txt'
 
 embedding_length = 50
 sentiment_analysis_options = 2
