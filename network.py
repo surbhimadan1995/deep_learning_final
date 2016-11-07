@@ -43,3 +43,6 @@ xs = tf.placeholder(tf.int32, shape=[None, None, embedding_length])
 ys = tf.placeholder(tf.int32, shape=[sentiment_analysis_options])
 
 Ewords = noisy_weight_variable([vocab_size, embedding_size], uniform_range=[-1,1])
+
+Wwords = noisy_weight_variable([])
+bwords = noisy_bias_variable([embedding_size])
