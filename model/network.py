@@ -46,3 +46,6 @@ Ewords = noisy_weight_variable([vocab_size, embedding_size], uniform_range=[-1,1
 
 Wwords = noisy_weight_variable([])
 bwords = noisy_bias_variable([embedding_size])
+embd_words = tf.nn.embedding_lookup(Ewords, xs)
+
+
