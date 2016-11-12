@@ -3,8 +3,8 @@ import batch
 
 fname_pos = '../data/train_pos.txt'
 
-embedding_length = 50
-sentiment_analysis_options = 2
+EMBED_SIZE = 50
+NUM_CLASSES = 2
 
 #################################################################
 # Helper functions
@@ -30,14 +30,17 @@ def get_batch():
 
 # input shape = [num_sentences, max_words_per_sentence, embedding_length]
 
-x = tf.placeholder(tf.int32, shape=[None, None, embedding_length])
-y = tf.placeholder(tf.int32, shape=[sentiment_analysis_options])
+x = tf.placeholder(tf.int32, shape=[None, None, EMBED_SIZE])
+y = tf.placeholder(tf.int32, shape=[NUM_CLASSES])
 
 e_words = noisy_weight_variable([vocab_size, embedding_size], uniform_range=[-1,1])
 
 w_words = noisy_weight_variable([])
-b_words = noisy_bias_variable([embedding_size])
-embd_words = tf.nn.embedding_lookup(e_words, xs)
+b_words = noisy_bias_variable([EMBED_SIZE])
+embd_words = tf.nn.embedding_lookup(e_words, x)
+
+
+
 
 
 """
