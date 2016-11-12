@@ -6,16 +6,6 @@ fname_pos = '../data/train_pos.txt'
 embedding_length = 50
 sentiment_analysis_options = 2
 
-###############################################################################
-#NOTE FOR BEVERLY: we want our input to be of type (((string list) list) list)
-# which is in total a list of documents, where each inner list is
-# a list of sentences and each inner list is a list of words
-# ex.
-# The documents "a b c. d. e f." and "g. h i j." would turn into:
-# [[["a", "b", "c"], ["d"], ["e", "f"]], [["g"], ["h", "i", "j"]]]
-###############################################################################
-
-
 #################################################################
 # Helper functions
 #################################################################
@@ -31,21 +21,45 @@ def noisy_bias_variable(shape):
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
 
-def get_batch()
-
+def get_batch():
+    # TODO
+    pass
 #################################################################
 # Model setup
 #################################################################
 
 # input shape = [num_sentences, max_words_per_sentence, embedding_length]
 
-xs = tf.placeholder(tf.int32, shape=[None, None, embedding_length])
-ys = tf.placeholder(tf.int32, shape=[sentiment_analysis_options])
+x = tf.placeholder(tf.int32, shape=[None, None, embedding_length])
+y = tf.placeholder(tf.int32, shape=[sentiment_analysis_options])
 
-Ewords = noisy_weight_variable([vocab_size, embedding_size], uniform_range=[-1,1])
+e_words = noisy_weight_variable([vocab_size, embedding_size], uniform_range=[-1,1])
 
-Wwords = noisy_weight_variable([])
-bwords = noisy_bias_variable([embedding_size])
-embd_words = tf.nn.embedding_lookup(Ewords, xs)
+w_words = noisy_weight_variable([])
+b_words = noisy_bias_variable([embedding_size])
+embd_words = tf.nn.embedding_lookup(e_words, xs)
+
+
+"""
+~Questions~:
+- loss function for sentiment
+- A 3D tensorof 2D tensors where each tensor is a sentence
+- Per document sentence length padding
+
+- How does conv work ?
+- How does k max pooling ? 
+
+
+
+
+
+
+
+
+
+"""
+
+
+
 
 
