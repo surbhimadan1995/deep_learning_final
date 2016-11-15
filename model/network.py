@@ -72,46 +72,46 @@ word_embedding_matrix= noisy_weight_variable([VOCAB_SIZE, WORD_EMBED_SIZE], unif
 #################################################################
 
 
-WORD_CONV_WIDTH = 5
-WORD_CONV_CHANNELS = 6
+CONV_WORD_WIDTH = 5
+CONV_WORD_IN_CHANNELS = 1
+CONV_WORD_OUT_CHANNELS = 6
 HOWEVER_MANY = -1
-K_WIDTH = 4
+WORD_K_WIDTH = 4
 
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
+# NHWC
 
-word_feature_maps = noisy_weight_variable([WORD_EMBED_SIZE, WORD_CONV_WIDTH, 1, WORD_CONV_CHANNELS])
+word_feature_maps = noisy_weight_variable([WORD_EMBED_SIZE, CONV_WORD_WIDTH, CONV_WORD_IN_CHANNELS, CONV_WORD_OUT_CHANNELS])
 word_conv_output = conv2d(reshaped_word_embeddings, word_feature_maps)
-pooling_output = k_max_pool(word_conv_output, K_WIDTH)
-tanh_output = tf.tanh(pooling_output)
+word_pooling_output = k_max_pool(word_conv_output, WORD_K_WIDTH)
+word_tanh_output = tf.tanh(word_pooling_output)
+# size = [None, WORD_EMBED_SIZE, None, CONV_WORD_OUT_CHANNELS]
+# hopppeeee [1, ...
 
 
-# TO FUTURE US:
-# we need the output of layer 1 to be a 2D tensor of shape [num_sentences, sentence_embedding_size]
-# then do layer 2 + softmax
+SENTENCE_K_WIDTH = 2
+SENTENCE_EMBED_SIZE = #???????
+CONV_SENTENCE_WIDTH = 5
+CONV_SENTENCE_IN_CHANNELS = 6
+CONV_SENTENCE_OUT_CHANNELS = 15
 
+# sentence_embedding_size, num sentences / width, in channels, out channels]
+sentence_feature_maps = noisy_weight_variable([SENTENCE_EMBED_SIZE, CONV_SENTENCE_WIDTH, CONV_SENTENCE_IN_CHANNELS, CONV_WORD_OUT_CHANNELS])
 
 
 # [HOWEVER_MANY, WORD_EMBED_SIZE, WORD_CONV_WIDTH, WORD_CONV_CHANNELS]
 
 
 
-W_conv1 = noisy_weight_variable([5, 5, 1, 32])
 
 
 
-
-
-'''
-weights = noisy_weight_variable([])
-biases = noisy_bias_variable([NUM_CLASSES])
-'''
 
 """
 ~Questions~:
 - loss function for sentiment
-- A 3D tensorof 2D tensors where each tensor is a sentence
 - Per document sentence length padding
 
 - How does conv work ?
