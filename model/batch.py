@@ -52,7 +52,7 @@ def split_docs(tokenized_docs, delim=re.compile("\.?\??!?")):
         #split_doc = [[w.lower() for w in sentence.strip().split()] for sentence in split_doc]
         final_docs.append(split_doc)
     return final_docs
-    
+
 
 '''
 Gets initial word-freq map for the docs passed in
@@ -211,19 +211,20 @@ def convert_docs_to_ints(word_ids, docs):
 '''
 POS_REVIEWS_TRAIN = '../data/train_pos'
 NEG_REVIEWS_TRAIN = '../data/train_neg'
-#POS_REVIEWS_TRAIN = '../data/beverly_pos'
-#NEG_REVIEWS_TRAIN = '../data/beverly_neg'
+# POS_REVIEWS_TRAIN = '../data/beverly_pos'
+# NEG_REVIEWS_TRAIN = '../data/beverly_neg'
 def get_imdb_data():
     positive = read_data(POS_REVIEWS_TRAIN)
     negative = read_data(NEG_REVIEWS_TRAIN)
-   
+
     # [0, 1] represents positive review, [1, 0] represents negative review
-    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative) 
-    
+    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative)
+
     final_counts, word_ids, docs = process([POS_REVIEWS_TRAIN,NEG_REVIEWS_TRAIN])
     int_docs = convert_docs_to_ints(word_ids, docs)
-    return len(word_ids) + 1, docs, int_docs, labels, word_ids
-
+    # add 1 to len(word_ids) to account for STOP
+    return len(word_ids)+1, docs, int_docs, labels
+'''
 POS_REVIEWS_TEST = '../data/test_pos'
 NEG_REVIEWS_TEST = '../data/test_neg'
 def get_imdb_test_data(word_ids):
@@ -231,7 +232,7 @@ def get_imdb_test_data(word_ids):
     negative = read_data(NEG_REVIEWS_TEST)
 
     # [0, 1] represents positive review, [1, 0] represents negative review
-    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative) 
+    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative)
 
     docs = positive + negative
 
@@ -240,7 +241,7 @@ def get_imdb_test_data(word_ids):
     int_docs = convert_docs_to_ints(word_ids, tokenized_docs)
 
     return int_docs, labels
-
+'''
 if __name__=='__main__':
     '''
     if len(sys.argv) <= 1:
