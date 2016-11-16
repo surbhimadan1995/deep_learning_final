@@ -13,6 +13,7 @@ import sys
 import re
 from collections import defaultdict
 import pdb
+import numpy as np
 
 '''
 Returns list of lines for the file passed in
@@ -112,9 +113,11 @@ Args:
     file_names - list of file names where each file contains movie reviews on each line
 
 Returns:
-    (dictionary of words to # occurrences, list of documents)
-        * where each document is a list of sentences
-        * where each sentence is a list of words
+    (final_counts, word_ids, final_docs)
+        * where final_counts is final word freq including unknowmn, symbol, number
+        * where word_ids are umappings of words to unique ints
+        * where final_docs are the same format as tokenized docs but including
+        unknown, symbol, number and STOPs
 '''
 def process(file_names):
     docs = []
@@ -124,7 +127,6 @@ def process(file_names):
     tokenized_docs = split_docs(html_free_docs)
     counts = get_word_counts(tokenized_docs)
     return clean(counts, tokenized_docs)
-
 
 '''
 Args:
@@ -195,8 +197,23 @@ def convert_docs_to_ints(word_ids, docs):
         int_docs.append(int_doc)
     return int_docs
 
+'''
+    gets imdb movie review data
+'''
+POS_REVIEWS = '../data/train_pos'
+NEG_REVIEWS = '../data/train_neg'
+def get_imdb_data():
+    positive = read_data(POS_REVIEWS)
+    negative = read_data(NEG_REVIEWS)
+    num_docs = len(positive) + len(negative)
+    labels = np.zeros(num_docs)
+    labels[:len(positive)] = 1
+    final_counts, word_ids, docs = process([POS_REVIEWS,NEG_REVIEWS])
+    int_docs = convert_docs_to_ints(word_ids, docs)
+    return docs, int_docs, labels
 
 if __name__=='__main__':
+    '''
     if len(sys.argv) <= 1:
         sys.exit('Usage: python3 batch.py <file_name> ...')
     file_names = []
@@ -204,10 +221,8 @@ if __name__=='__main__':
         file_names.append(sys.argv[i])
     final_counts, word_ids, docs = process(file_names)
     int_docs = convert_docs_to_ints(word_ids, docs)
-
-
-
-
-
+    '''
+    docs, int_docs, labels = get_imdb_data()
+    pdb.set_trace()
 
 
