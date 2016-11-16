@@ -199,18 +199,22 @@ def convert_docs_to_ints(word_ids, docs):
 
 '''
     gets imdb movie review data
+    returns vocab size, documents (words), int_docs (words in int form), labels (of one-hot vectors)
+        ** labels:  [0, 1] represents positive review
+                    [1, 0] represents negative review
 '''
 POS_REVIEWS = '../data/train_pos'
 NEG_REVIEWS = '../data/train_neg'
 def get_imdb_data():
     positive = read_data(POS_REVIEWS)
     negative = read_data(NEG_REVIEWS)
-    num_docs = len(positive) + len(negative)
-    labels = np.zeros(num_docs)
-    labels[:len(positive)] = 1
+   
+    # [0, 1] represents positive review, [1, 0] represents negative review
+    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative) 
+    
     final_counts, word_ids, docs = process([POS_REVIEWS,NEG_REVIEWS])
     int_docs = convert_docs_to_ints(word_ids, docs)
-    return docs, int_docs, labels
+    return len(word_ids), docs, int_docs, labels
 
 if __name__=='__main__':
     '''
@@ -222,7 +226,7 @@ if __name__=='__main__':
     final_counts, word_ids, docs = process(file_names)
     int_docs = convert_docs_to_ints(word_ids, docs)
     '''
-    docs, int_docs, labels = get_imdb_data()
+    vocab_size, docs, int_docs, labels = get_imdb_data()
     pdb.set_trace()
 
 
