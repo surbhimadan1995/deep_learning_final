@@ -183,8 +183,12 @@ Returns:
         * where each sentence is a list of words in their integer form
 '''
 def convert_docs_to_ints(word_ids, docs):
+    STOP = 0
+    PADDING_ID = 0 # which is also a stop
+
     int_docs = []
     for doc in docs:
+        max_sentence_length = max(len(sentence) for sentence in doc)
         int_doc = []
         for sentence in doc:
             int_sentence = []
@@ -192,9 +196,11 @@ def convert_docs_to_ints(word_ids, docs):
                 if word in word_ids:
                     int_sentence.append(word_ids[word])
                 else:
-                    int_sentence.append(0)
+                    int_sentence.append(STOP)
+            int_sentence += [PADDING_ID] * (max_sentence_length - len(int_sentence))
             int_doc.append(int_sentence)
         int_docs.append(int_doc)
+
     return int_docs
 
 '''
@@ -203,19 +209,38 @@ def convert_docs_to_ints(word_ids, docs):
         ** labels:  [0, 1] represents positive review
                     [1, 0] represents negative review
 '''
-POS_REVIEWS = '../data/train_pos'
-NEG_REVIEWS = '../data/train_neg'
+POS_REVIEWS_TRAIN = '../data/train_pos'
+NEG_REVIEWS_TRAIN = '../data/train_neg'
+#POS_REVIEWS_TRAIN = '../data/beverly_pos'
+#NEG_REVIEWS_TRAIN = '../data/beverly_neg'
 def get_imdb_data():
-    positive = read_data(POS_REVIEWS)
-    negative = read_data(NEG_REVIEWS)
+    positive = read_data(POS_REVIEWS_TRAIN)
+    negative = read_data(NEG_REVIEWS_TRAIN)
    
     # [0, 1] represents positive review, [1, 0] represents negative review
     labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative) 
     
-    final_counts, word_ids, docs = process([POS_REVIEWS,NEG_REVIEWS])
+    final_counts, word_ids, docs = process([POS_REVIEWS_TRAIN,NEG_REVIEWS_TRAIN])
     int_docs = convert_docs_to_ints(word_ids, docs)
     return len(word_ids), docs, int_docs, labels
+'''
+POS_REVIEWS_TEST = '../data/test_pos'
+NEG_REVIEWS_TEST = '../data/test_neg'
+def get_imdb_test_data(word_ids):
+    positive = read_data(POS_REVIEWS_TEST)
+    negative = read_data(NEG_REVIEWS_TEST)
 
+    # [0, 1] represents positive review, [1, 0] represents negative review
+    labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative) 
+
+    docs = positive + negative
+
+    html_free_docs = strip_html(docs)
+    tokenized_docs = split_docs(html_free_docs)
+    int_docs = convert_docs_to_ints(word_ids, tokenized_docs)
+
+    return int_docs, labels
+'''
 if __name__=='__main__':
     '''
     if len(sys.argv) <= 1:
