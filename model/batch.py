@@ -222,8 +222,8 @@ def get_imdb_data():
     
     final_counts, word_ids, docs = process([POS_REVIEWS_TRAIN,NEG_REVIEWS_TRAIN])
     int_docs = convert_docs_to_ints(word_ids, docs)
-    return len(word_ids), docs, int_docs, labels
-'''
+    return len(word_ids) + 1, docs, int_docs, labels, word_ids
+
 POS_REVIEWS_TEST = '../data/test_pos'
 NEG_REVIEWS_TEST = '../data/test_neg'
 def get_imdb_test_data(word_ids):
@@ -240,7 +240,7 @@ def get_imdb_test_data(word_ids):
     int_docs = convert_docs_to_ints(word_ids, tokenized_docs)
 
     return int_docs, labels
-'''
+
 if __name__=='__main__':
     '''
     if len(sys.argv) <= 1:
@@ -251,7 +251,6 @@ if __name__=='__main__':
     final_counts, word_ids, docs = process(file_names)
     int_docs = convert_docs_to_ints(word_ids, docs)
     '''
-    vocab_size, docs, int_docs, labels = get_imdb_data()
+    vocab_size, docs, int_docs, labels, word_ids = get_imdb_data()
+    test_int_docs, test_labels = get_imdb_test_data(word_ids)
     pdb.set_trace()
-
-
