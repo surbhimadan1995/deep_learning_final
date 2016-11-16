@@ -10,6 +10,8 @@ NUM_CLASSES = 2
 LEARNING_RATE = 1e-4
 NUM_EPOCHS = 1
 
+print '=== cleaning data ==='
+
 VOCAB_SIZE, _, int_docs, labels = batch.get_imdb_data()
 NUM_BATCHES = len(int_docs)
 
@@ -135,7 +137,7 @@ session.run(tf.initialize_all_variables())
 print '=== training ==='
 print 'training on', NUM_BATCHES, 'batches'
 
-for ep in range(NUM_EPOCH):
+for ep in range(NUM_EPOCHS):
     for i in range(NUM_BATCHES):
         doc = int_docs[i]
         label = labels[i]
