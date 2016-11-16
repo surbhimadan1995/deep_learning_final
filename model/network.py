@@ -1,5 +1,6 @@
 import tensorflow as tf
 import pdb
+import numpy as np
 
 
 WORD_EMBED_SIZE = 10
@@ -46,7 +47,12 @@ def conv2d(x, w):
 What is the value of k ? k things we want to keep --> but how many ? (a fraction of the total)
 """
 def k_max_pool(x, k):
-    return tf.nn.max_pool(x, ksize=[1, WORD_EMBED_SIZE, k, 1], strides=[1, 1, k, 1], padding='SAME')
+    reshaped_x = tf.transpose(x, perm=[0, 3, 1, 2])
+    top_values, _ = tf.nn.top_k(reshaped_x, k, sorted=False)
+    pooled_x = tf.transpose(top_values, perm=[0, 2, 3, 1])
+    return pooled_x
+
+    # return tf.nn.max_pool(x, ksize=[1, WORD_EMBED_SIZE, k, 1], strides=[1, 1, k, 1], padding='SAME')
     # values, _ = tf.nn.top_k(x, k) # by default, sorted=True
     # return values
 
@@ -64,7 +70,7 @@ def k_max_pool(x, k):
 x = tf.placeholder(tf.int32, shape=[None, None])
 y = tf.placeholder(tf.float32, shape=[NUM_CLASSES])
 
-word_embedding_matrix= noisy_weight_variable([VOCAB_SIZE, WORD_EMBED_SIZE], uniform_range=[-1,1])
+word_embedding_matrix = noisy_weight_variable([VOCAB_SIZE, WORD_EMBED_SIZE], uniform_range=[-1,1])
 
 #################################################################
 # Network
@@ -76,38 +82,45 @@ CONV_WORD_WIDTH = 5
 CONV_WORD_IN_CHANNELS = 1
 CONV_WORD_OUT_CHANNELS = 6
 HOWEVER_MANY = -1
-WORD_K_WIDTH = 4
+WORD_K = 4
 
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
-# NHWC
-
+# size = [None, 10, None, 1] (NHWC)
 word_feature_maps = noisy_weight_variable([WORD_EMBED_SIZE, CONV_WORD_WIDTH, CONV_WORD_IN_CHANNELS, CONV_WORD_OUT_CHANNELS])
+
 word_conv_output = conv2d(reshaped_word_embeddings, word_feature_maps)
-word_pooling_output = k_max_pool(word_conv_output, WORD_K_WIDTH)
+word_pooling_output = k_max_pool(word_conv_output, WORD_K)
 word_tanh_output = tf.tanh(word_pooling_output)
-# size = [None, WORD_EMBED_SIZE, None, CONV_WORD_OUT_CHANNELS]
-# hopppeeee [1, ...
+# shape = [None, WORD_EMBED_SIZE, k, CONV_WORD_OUT_CHANNELS]
 
 
-SENTENCE_K_WIDTH = 2
-SENTENCE_EMBED_SIZE = #???????
+SENTENCE_K = 2
+layer_1_shape = word_tanh_output.get_shape().as_list()
+SENTENCE_EMBED_SIZE = np.prod(layer_1_shape[1:])
 CONV_SENTENCE_WIDTH = 5
-CONV_SENTENCE_IN_CHANNELS = 6
+CONV_SENTENCE_IN_CHANNELS = 1
 CONV_SENTENCE_OUT_CHANNELS = 15
 
-# sentence_embedding_size, num sentences / width, in channels, out channels]
-sentence_feature_maps = noisy_weight_variable([SENTENCE_EMBED_SIZE, CONV_SENTENCE_WIDTH, CONV_SENTENCE_IN_CHANNELS, CONV_WORD_OUT_CHANNELS])
+reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [1, SENTENCE_EMBED_SIZE, HOWEVER_MANY, CONV_SENTENCE_IN_CHANNELS])
+# shape = [1, 240, None, 1] (NHWC)
+sentence_feature_maps = noisy_weight_variable([SENTENCE_EMBED_SIZE, CONV_SENTENCE_WIDTH, CONV_SENTENCE_IN_CHANNELS, CONV_SENTENCE_OUT_CHANNELS])
+
+sentence_conv_output = conv2d(reshaped_sentence_embeddings, sentence_feature_maps)
+sentence_pooling_output = k_max_pool(sentence_conv_output, SENTENCE_K)
+sentence_tanh_output = tf.tanh(sentence_pooling_output)
+# shape = [1, 240, 2, 15]
 
 
-# [HOWEVER_MANY, WORD_EMBED_SIZE, WORD_CONV_WIDTH, WORD_CONV_CHANNELS]
+document_embedding = tf.reshape(sentence_tanh_output, [1, HOWEVER_MANY])
+document_embedding_size = document_embedding.get_shape()[1].value
 
+W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
+b = noisy_bias_variable([NUM_CLASSES])
 
-
-
-
-
+probs = tf.nn.softmax(tf.matmul(document_embedding, W) + b)
+pdb.set_trace()
 
 """
 ~Questions~:
