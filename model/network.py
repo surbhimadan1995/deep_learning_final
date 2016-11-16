@@ -1,13 +1,17 @@
+print '=== start ==='
+
 import tensorflow as tf
 import pdb
 import numpy as np
-
+import batch
 
 WORD_EMBED_SIZE = 10
 NUM_CLASSES = 2
-VOCAB_SIZE = 42
+LEARNING_RATE = 1e-4
+NUM_EPOCHS = 1
 
-
+VOCAB_SIZE, _, int_docs, labels = batch.get_imdb_data()
+NUM_BATCHES = len(int_docs)
 
 #################################################################
 # Helper functions
@@ -23,11 +27,6 @@ def noisy_weight_variable(shape, uniform_range=None):
 def noisy_bias_variable(shape):
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
-
-#final_counts, word_ids, docs = batch.process({'../data/train_pos','../data/train_neg'})
-#int_docs = batch.convert_docs_to_ints(word_ids, docs)
-def get_batch():
-    pass
 
 
 
@@ -77,6 +76,7 @@ word_embedding_matrix = noisy_weight_variable([VOCAB_SIZE, WORD_EMBED_SIZE], uni
 # NHWC = batch_size, height, width, channel
 #################################################################
 
+print '=== prepping network ==='
 
 CONV_WORD_WIDTH = 5
 CONV_WORD_IN_CHANNELS = 1
@@ -87,7 +87,7 @@ WORD_K = 4
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
-# size = [None, 10, None, 1] (NHWC)
+# shape = [None, 10, None, 1] (NHWC)
 word_feature_maps = noisy_weight_variable([WORD_EMBED_SIZE, CONV_WORD_WIDTH, CONV_WORD_IN_CHANNELS, CONV_WORD_OUT_CHANNELS])
 
 word_conv_output = conv2d(reshaped_word_embeddings, word_feature_maps)
@@ -120,14 +120,28 @@ W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
 b = noisy_bias_variable([NUM_CLASSES])
 
 probs = tf.nn.softmax(tf.matmul(document_embedding, W) + b)
-pdb.set_trace()
+probs = tf.reshape(probs, [HOWEVER_MANY])
 
-"""
-~Questions~:
-- loss function for sentiment
-- Per document sentence length padding
+cross_entropy = -tf.reduce_sum(y * tf.log(probs))
+train_step = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cross_entropy)
+num_correct_predictions = tf.equal(tf.argmax(probs, 1), tf.argmax(y, 1))
+accuracy = tf.reduce_mean(tf.cast(num_correct_predictions, tf.float32))
 
-- How does conv work ?
-- How does k max pooling ?
 
-"""
+session = tf.InteractiveSession()
+session.run(tf.initialize_all_variables())
+
+# train on documents
+print '=== training ==='
+print 'training on', NUM_BATCHES, 'batches'
+
+for ep in range(NUM_EPOCH):
+    for i in range(NUM_BATCHES):
+        doc = int_docs[i]
+        label = labels[i]
+
+        train_step.run(feed_dict={x: doc, y: label})
+
+        if i % 100 == 0:
+            acc = accuracy.eval(feed_dict={x: doc, y: label})
+            print 'step', i, 'accuracy:', acc
