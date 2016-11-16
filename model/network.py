@@ -4,6 +4,8 @@ import tensorflow as tf
 import pdb
 import numpy as np
 import batch
+import random
+
 
 WORD_EMBED_SIZE = 10
 NUM_CLASSES = 2
@@ -13,7 +15,9 @@ NUM_EPOCHS = 1
 print '=== cleaning data ==='
 
 VOCAB_SIZE, _, int_docs, labels = batch.get_imdb_data()
-NUM_BATCHES = len(int_docs)
+train_pairs = zip(int_docs, labels)
+random.shuffle(train_pairs)
+NUM_BATCHES = len(train_pairs)
 
 #################################################################
 # Helper functions
@@ -126,7 +130,7 @@ probs = tf.reshape(probs, [HOWEVER_MANY])
 
 cross_entropy = -tf.reduce_sum(y * tf.log(probs))
 train_step = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cross_entropy)
-num_correct_predictions = tf.equal(tf.argmax(probs, 1), tf.argmax(y, 1))
+num_correct_predictions = tf.equal(tf.argmax(probs, 0), tf.argmax(y, 0))
 accuracy = tf.reduce_mean(tf.cast(num_correct_predictions, tf.float32))
 
 
@@ -137,13 +141,18 @@ session.run(tf.initialize_all_variables())
 print '=== training ==='
 print 'training on', NUM_BATCHES, 'batches'
 
+acc_accum = 0
+counter = 1
+
 for ep in range(NUM_EPOCHS):
     for i in range(NUM_BATCHES):
-        doc = int_docs[i]
-        label = labels[i]
+        doc, label = train_pairs[i]
+
+        if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
         train_step.run(feed_dict={x: doc, y: label})
+        acc_accum += accuracy.eval(feed_dict={x: doc, y: label})
+        counter += 1
 
-        if i % 100 == 0:
-            acc = accuracy.eval(feed_dict={x: doc, y: label})
-            print 'step', i, 'accuracy:', acc
+        if counter % 100 == 0:
+            print 'step', counter, 'accuracy:', acc_accum / counter
