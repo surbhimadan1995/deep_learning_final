@@ -20,7 +20,7 @@ test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
 
 test_pairs = list(zip(test_int_docs, test_labels))
 random.shuffle(test_pairs)
-pdb.set_trace()
+#pdb.set_trace()
 TEST_NUM_BATCHES = len(test_pairs)
 
 train_pairs = list(zip(int_docs, labels))
@@ -99,6 +99,7 @@ HOWEVER_MANY = -1
 WORD_K = 4
 
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
+word_embeddings = tf.nn.dropout(word_embeddings, 0.1)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
 # shape = [None, 10, None, 1] (NHWC)
@@ -122,6 +123,7 @@ CONV_SENTENCE_OUT_CHANNELS = 15
 
 reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [HOWEVER_MANY, SENTENCE_EMBED_SIZE])
 transposed_sentence_embeddings = tf.transpose(reshaped_sentence_embeddings, perm=[1, 0])
+transposed_sentence_embeddings = tf.nn.dropout(transposed_sentence_embeddings, 0.1)
 expanded_sentence_embeddings = tf.expand_dims(tf.expand_dims(transposed_sentence_embeddings, 0), 3)
 
 #reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [1, SENTENCE_EMBED_SIZE, HOWEVER_MANY, CONV_SENTENCE_IN_CHANNELS])
@@ -136,6 +138,7 @@ sentence_tanh_output = tf.tanh(sentence_pooling_output)
 
 
 document_embedding = tf.reshape(sentence_tanh_output, [1, HOWEVER_MANY])
+document_embedding = tf.nn.dropout(document_embedding, 0.1)
 document_embedding_size = document_embedding.get_shape()[1].value
 
 W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
@@ -190,3 +193,9 @@ for i in range(TEST_NUM_BATCHES):
         print ('step', test_counter, 'accuracy:', test_acc_accum / test_counter)
 
 print ('final test step', test_counter, 'accuracy:', test_acc_accum / test_counter)
+
+
+
+
+
+
