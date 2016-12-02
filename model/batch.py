@@ -43,7 +43,8 @@ Returns:
         * where each doc is a list of sentences split at either token .?!
         * where each sentence is a list of word tokens
 '''
-def split_docs(tokenized_docs, delim=re.compile("\.?\??!?")):
+#\.+|[.?!]
+def split_docs(tokenized_docs, delim=re.compile("\.+|[.?!]")):
     final_docs = []
     for doc in tokenized_docs:
         #pdb.set_trace()

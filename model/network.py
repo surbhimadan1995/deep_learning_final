@@ -18,6 +18,8 @@ VOCAB_SIZE, _, int_docs, labels, word_ids = batch.get_imdb_data()
 print ('=== getting testing data ===')
 test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
 
+
+
 test_pairs = list(zip(test_int_docs, test_labels))
 random.shuffle(test_pairs)
 #pdb.set_trace()
@@ -83,6 +85,7 @@ def k_max_pool(x, k):
 x = tf.placeholder(tf.int32, shape=[None, None])
 y = tf.placeholder(tf.float32, shape=[NUM_CLASSES])
 
+
 word_embedding_matrix = noisy_weight_variable([VOCAB_SIZE, WORD_EMBED_SIZE], uniform_range=[-1,1])
 
 #################################################################
@@ -99,7 +102,7 @@ HOWEVER_MANY = -1
 WORD_K = 4
 
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
-word_embeddings = tf.nn.dropout(word_embeddings, 0.1)
+word_embeddings = tf.nn.dropout(word_embeddings, 0.4)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
 # shape = [None, 10, None, 1] (NHWC)
@@ -123,8 +126,10 @@ CONV_SENTENCE_OUT_CHANNELS = 15
 
 reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [HOWEVER_MANY, SENTENCE_EMBED_SIZE])
 transposed_sentence_embeddings = tf.transpose(reshaped_sentence_embeddings, perm=[1, 0])
-transposed_sentence_embeddings = tf.nn.dropout(transposed_sentence_embeddings, 0.1)
+transposed_sentence_embeddings = tf.nn.dropout(transposed_sentence_embeddings, 0.6)
 expanded_sentence_embeddings = tf.expand_dims(tf.expand_dims(transposed_sentence_embeddings, 0), 3)
+
+
 
 #reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [1, SENTENCE_EMBED_SIZE, HOWEVER_MANY, CONV_SENTENCE_IN_CHANNELS])
 # shape = [1, 240, None, 1] (NHWC)
@@ -138,11 +143,14 @@ sentence_tanh_output = tf.tanh(sentence_pooling_output)
 
 
 document_embedding = tf.reshape(sentence_tanh_output, [1, HOWEVER_MANY])
-document_embedding = tf.nn.dropout(document_embedding, 0.1)
+document_embedding = tf.nn.dropout(document_embedding, 1)
 document_embedding_size = document_embedding.get_shape()[1].value
 
 W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
 b = noisy_bias_variable([NUM_CLASSES])
+
+
+
 
 probs = tf.nn.softmax(tf.matmul(document_embedding, W) + b)
 probs = tf.reshape(probs, [HOWEVER_MANY])
@@ -152,6 +160,8 @@ train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_ent
 num_correct_predictions = tf.equal(tf.argmax(probs, 0), tf.argmax(y, 0))
 accuracy = tf.reduce_mean(tf.cast(num_correct_predictions, tf.float32))
 
+# gradients = tf.train.GradientDescentOptimizer(LEARNING_RATE).compute_gradients(cross_entropy, [vsp])
+gradients = tf.gradients(cross_entropy, reshaped_sentence_embeddings)
 
 session = tf.InteractiveSession()
 session.run(tf.initialize_all_variables())
@@ -170,6 +180,21 @@ for ep in range(NUM_EPOCHS):
         if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
         train_step.run(feed_dict={x: doc, y: label})
+             
+        
+        print("====== gradient values =====")
+        
+        ind = tf.argmin(probs, dimension=0)
+        index = ind.eval(feed_dict={x: doc, y: label})
+        # pdb.set_trace()
+        list_ = [0, 0]
+        list_[index] = 1
+
+        #pdb.set_trace()
+        grad_vals = session.run(gradients, feed_dict={x: doc, y: list_})  
+
+        pdb.set_trace()
+
         acc_accum += accuracy.eval(feed_dict={x: doc, y: label})
         counter += 1
 
