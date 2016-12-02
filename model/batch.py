@@ -243,7 +243,7 @@ def get_imdb_test_data(word_ids):
     tokenized_docs = split_docs(html_free_docs)
     int_docs = convert_docs_to_ints(word_ids, tokenized_docs)
 
-    return int_docs, labels
+    return tokenized_docs, int_docs, labels
 
 if __name__=='__main__':
     '''

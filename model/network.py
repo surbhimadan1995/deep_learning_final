@@ -16,14 +16,14 @@ print ('=== getting training data ===')
 VOCAB_SIZE, _, int_docs, labels, word_ids = batch.get_imdb_data()
 
 print ('=== getting testing data ===')
-test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
+test_word_docs, test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
 
 
 
-test_pairs = list(zip(test_int_docs, test_labels))
-random.shuffle(test_pairs)
+test_triples = list(zip(test_int_docs, test_labels, test_word_docs))
+random.shuffle(test_triples)
 #pdb.set_trace()
-TEST_NUM_BATCHES = len(test_pairs)
+TEST_NUM_BATCHES = len(test_triples)
 
 train_pairs = list(zip(int_docs, labels))
 random.shuffle(train_pairs)
@@ -172,9 +172,12 @@ print ('training on', NUM_BATCHES, 'batches')
 
 acc_accum = 0
 counter = 1
+doc_summaries = []
+summary = True
 
 for ep in range(NUM_EPOCHS):
-    for i in range(NUM_BATCHES):
+    # 100 was NUM_BATCHES
+    for i in range(100):
         doc, label = train_pairs[i]
 
         if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
@@ -190,10 +193,9 @@ for ep in range(NUM_EPOCHS):
         list_ = [0, 0]
         list_[index] = 1
 
-        #pdb.set_trace()
-        grad_vals = session.run(gradients, feed_dict={x: doc, y: list_})  
+        #pdb.set_trace()  
 
-        pdb.set_trace()
+        #pdb.set_trace()
 
         acc_accum += accuracy.eval(feed_dict={x: doc, y: label})
         counter += 1
@@ -207,17 +209,30 @@ print("=== testing ===")
 print ('testing on', TEST_NUM_BATCHES, 'batches')
 test_acc_accum = 0
 test_counter = 1
+SUMMARY_LENGTH = 2
 
 for i in range(TEST_NUM_BATCHES):
-    doc, label = test_pairs[i]
+    doc, label, words = test_triples[i]
     if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
-    test_acc_accum += session.run([accuracy], feed_dict={x: doc, y: label})[0]
-    test_counter += 1
-    if test_counter % 100 == 0:
-        print ('step', test_counter, 'accuracy:', test_acc_accum / test_counter)
+    if summary:
+        grad_vals = session.run(gradients, feed_dict={x: doc, y: list_})
+        grad_vals = tf.reduce_sum(tf.abs(grad_vals[0]), 1)
+        _, idx = tf.nn.top_k(grad_vals, k=SUMMARY_LENGTH, sorted=False)
+        print("--- full document ---")
+        print(words)
+        print("--- summary ---")
+        sorted_indices = sorted(idx.eval())
+        print(" ".join(words[sorted_indices[0]]))
+        print(" ".join(words[sorted_indices[1]]))
+    else:
+        test_acc_accum += session.run([accuracy], feed_dict={x: doc, y: label})[0]
+        test_counter += 1
+        if test_counter % 100 == 0:
+            print ('step', test_counter, 'accuracy:', test_acc_accum / test_counter)
 
-print ('final test step', test_counter, 'accuracy:', test_acc_accum / test_counter)
+if not summary:
+    print ('final test step', test_counter, 'accuracy:', test_acc_accum / test_counter)
 
 
 
