@@ -220,7 +220,10 @@ for i in range(TEST_NUM_BATCHES):
         grad_vals = tf.reduce_sum(tf.abs(grad_vals[0]), 1)
         _, idx = tf.nn.top_k(grad_vals, k=SUMMARY_LENGTH, sorted=False)
         print("--- full document ---")
-        print(words)
+        full_review = ""
+        for sent in words:
+            full_review += " ".join(sent) + "."
+        print full_review
         print("--- summary ---")
         sorted_indices = sorted(idx.eval())
         print(" ".join(words[sorted_indices[0]]))
