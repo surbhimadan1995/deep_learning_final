@@ -8,7 +8,7 @@ import random
 
 WORD_EMBED_SIZE = 10
 NUM_CLASSES = 2
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-4
 NUM_EPOCHS = 1
 
 print ('=== cleaning data ===')
@@ -70,6 +70,11 @@ def k_max_pool(x, k):
     # return tf.nn.max_pool(x, ksize=[1, WORD_EMBED_SIZE, k, 1], strides=[1, 1, k, 1], padding='SAME')
     # values, _ = tf.nn.top_k(x, k) # by default, sorted=True
     # return values
+
+
+
+def argmax(it):
+    return max(enumerate(it), key=lambda x: x[1])[0]
 
 #################################################################
 # Model setup
@@ -150,15 +155,11 @@ W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
 b = noisy_bias_variable([NUM_CLASSES])
 
 
-
-
 probs = tf.nn.softmax(tf.matmul(document_embedding, W) + b)
-probs = tf.reshape(probs, [HOWEVER_MANY])
+probs = tf.reshape(probs, [NUM_CLASSES])
 
 cross_entropy = -tf.reduce_sum(y * tf.log(probs))
-train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_entropy)
-num_correct_predictions = tf.equal(tf.argmax(probs, 0), tf.argmax(y, 0))
-accuracy = tf.reduce_mean(tf.cast(num_correct_predictions, tf.float32))
+train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_entropy) 
 
 # gradients = tf.train.GradientDescentOptimizer(LEARNING_RATE).compute_gradients(cross_entropy, [vsp])
 gradients = tf.gradients(cross_entropy, reshaped_sentence_embeddings)
@@ -171,39 +172,36 @@ print ('=== training ===')
 print ('training on', NUM_BATCHES, 'batches')
 
 acc_accum = 0
+ce_accum = 0
 counter = 1
 doc_summaries = []
-summary = True
+summary = False
 
 for ep in range(NUM_EPOCHS):
-    # 100 was NUM_BATCHES
-    for i in range(100):
+    for i in range(NUM_BATCHES):
         doc, label = train_pairs[i]
 
         if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
         train_step.run(feed_dict={x: doc, y: label})
-             
-        
-        print("====== gradient values =====")
         
         ind = tf.argmin(probs, dimension=0)
         index = ind.eval(feed_dict={x: doc, y: label})
-        # pdb.set_trace()
         list_ = [0, 0]
         list_[index] = 1
 
-        #pdb.set_trace()  
+        p = probs.eval(feed_dict={x: doc, y: label})
+        is_correct_prediction = float(argmax(p) == argmax(label))
 
-        #pdb.set_trace()
-
-        acc_accum += accuracy.eval(feed_dict={x: doc, y: label})
+        acc_accum += is_correct_prediction
         counter += 1
 
-        if counter % 100 == 0:
-            print ('step', counter, 'accuracy:', acc_accum / counter)
+        ce_accum += cross_entropy.eval(feed_dict={x: doc, y: label})
 
-print('final train step', counter, 'accuracy:', acc_accum / counter)
+        if counter % 100 == 0:
+            print ('step', counter, 'accuracy:', acc_accum / counter, 'cross entropy:', ce_accum / counter)
+
+print('final train step', counter, 'accuracy:', acc_accum / counter, 'cross entropy:', ce_accum / counter)
 
 print("=== testing ===")
 print ('testing on', TEST_NUM_BATCHES, 'batches')
@@ -229,7 +227,10 @@ for i in range(TEST_NUM_BATCHES):
         print(" ".join(words[sorted_indices[0]]))
         print(" ".join(words[sorted_indices[1]]))
     else:
-        test_acc_accum += session.run([accuracy], feed_dict={x: doc, y: label})[0]
+        p = probs.eval(feed_dict={x: doc, y: label})
+        is_correct_prediction = float(argmax(p) == argmax(label))
+
+        test_acc_accum += is_correct_prediction
         test_counter += 1
         if test_counter % 100 == 0:
             print ('step', test_counter, 'accuracy:', test_acc_accum / test_counter)
