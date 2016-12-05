@@ -8,26 +8,27 @@ import random
 
 WORD_EMBED_SIZE = 10
 NUM_CLASSES = 2
-LEARNING_RATE = 0.001
-NUM_EPOCHS = 1
+LEARNING_RATE = 1e-4
+NUM_EPOCHS = 2
+
+
 
 print ('=== cleaning data ===')
 print ('=== getting training data ===')
 VOCAB_SIZE, _, int_docs, labels, word_ids = batch.get_imdb_data()
 
-print ('=== getting testing data ===')
-test_word_docs, test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
-
-
-
-test_triples = list(zip(test_int_docs, test_labels, test_word_docs))
-random.shuffle(test_triples)
-#pdb.set_trace()
-TEST_NUM_BATCHES = len(test_triples)
-
 train_pairs = list(zip(int_docs, labels))
 random.shuffle(train_pairs)
 NUM_BATCHES = len(train_pairs)
+
+
+
+print ('=== getting testing data ===')
+test_word_docs, test_int_docs, test_labels = batch.get_imdb_test_data(word_ids)
+
+test_triples = list(zip(test_int_docs, test_labels, test_word_docs))
+random.shuffle(test_triples)
+TEST_NUM_BATCHES = len(test_triples)
 
 #################################################################
 # Helper functions
@@ -67,9 +68,8 @@ def k_max_pool(x, k):
     pooled_x = tf.transpose(top_values, perm=[0, 2, 3, 1])
     return pooled_x
 
-    # return tf.nn.max_pool(x, ksize=[1, WORD_EMBED_SIZE, k, 1], strides=[1, 1, k, 1], padding='SAME')
-    # values, _ = tf.nn.top_k(x, k) # by default, sorted=True
-    # return values
+def argmax(it):
+    return max(enumerate(it), key=lambda x: x[1])[0]
 
 #################################################################
 # Model setup
@@ -101,8 +101,9 @@ CONV_WORD_OUT_CHANNELS = 6
 HOWEVER_MANY = -1
 WORD_K = 4
 
+
 word_embeddings = tf.nn.embedding_lookup(word_embedding_matrix, x)
-word_embeddings = tf.nn.dropout(word_embeddings, 0.4)
+# word_embeddings = tf.nn.dropout(word_embeddings, 0.9)
 transposed_word_embeddings = tf.transpose(word_embeddings, perm=[0, 2, 1])
 reshaped_word_embeddings = tf.expand_dims(transposed_word_embeddings, 3)
 # shape = [None, 10, None, 1] (NHWC)
@@ -114,6 +115,7 @@ word_tanh_output = tf.tanh(word_pooling_output)
 # shape = [None, WORD_EMBED_SIZE, k, CONV_WORD_OUT_CHANNELS]
 
 
+
 SENTENCE_K = 2
 layer_1_shape = word_tanh_output.get_shape().as_list()
 SENTENCE_EMBED_SIZE = np.prod(layer_1_shape[1:])
@@ -122,28 +124,21 @@ CONV_SENTENCE_IN_CHANNELS = 1
 CONV_SENTENCE_OUT_CHANNELS = 15
 
 
-
-
 reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [HOWEVER_MANY, SENTENCE_EMBED_SIZE])
 transposed_sentence_embeddings = tf.transpose(reshaped_sentence_embeddings, perm=[1, 0])
-transposed_sentence_embeddings = tf.nn.dropout(transposed_sentence_embeddings, 0.6)
+# transposed_sentence_embeddings = tf.nn.dropout(transposed_sentence_embeddings, 0.9)
 expanded_sentence_embeddings = tf.expand_dims(tf.expand_dims(transposed_sentence_embeddings, 0), 3)
-
-
-
-#reshaped_sentence_embeddings = tf.reshape(word_tanh_output, [1, SENTENCE_EMBED_SIZE, HOWEVER_MANY, CONV_SENTENCE_IN_CHANNELS])
 # shape = [1, 240, None, 1] (NHWC)
+
 sentence_feature_maps = noisy_weight_variable([SENTENCE_EMBED_SIZE, CONV_SENTENCE_WIDTH, CONV_SENTENCE_IN_CHANNELS, CONV_SENTENCE_OUT_CHANNELS])
 
 sentence_conv_output = conv2d(expanded_sentence_embeddings, sentence_feature_maps)
 sentence_pooling_output = k_max_pool(sentence_conv_output, SENTENCE_K)
 sentence_tanh_output = tf.tanh(sentence_pooling_output)
-
 # shape = [1, 240, 2, 15]
 
 
 document_embedding = tf.reshape(sentence_tanh_output, [1, HOWEVER_MANY])
-document_embedding = tf.nn.dropout(document_embedding, 1)
 document_embedding_size = document_embedding.get_shape()[1].value
 
 W = noisy_weight_variable([document_embedding_size, NUM_CLASSES])
@@ -151,57 +146,56 @@ b = noisy_bias_variable([NUM_CLASSES])
 
 
 
-
 probs = tf.nn.softmax(tf.matmul(document_embedding, W) + b)
-probs = tf.reshape(probs, [HOWEVER_MANY])
+logprobs = -tf.log(probs)
 
-cross_entropy = -tf.reduce_sum(y * tf.log(probs))
+cross_entropy = tf.reduce_sum(y * logprobs)
 train_step = tf.train.GradientDescentOptimizer(LEARNING_RATE).minimize(cross_entropy)
-num_correct_predictions = tf.equal(tf.argmax(probs, 0), tf.argmax(y, 0))
-accuracy = tf.reduce_mean(tf.cast(num_correct_predictions, tf.float32))
 
-# gradients = tf.train.GradientDescentOptimizer(LEARNING_RATE).compute_gradients(cross_entropy, [vsp])
 gradients = tf.gradients(cross_entropy, reshaped_sentence_embeddings)
 
 session = tf.InteractiveSession()
 session.run(tf.initialize_all_variables())
 
-# train on documents
+
 print ('=== training ===')
 print ('training on', NUM_BATCHES, 'batches')
 
 acc_accum = 0
-counter = 1
+acc_total = 0
+ent_accum = 0
+counter = 0
+total = 0
 doc_summaries = []
-summary = True
+summary = False
 
 for ep in range(NUM_EPOCHS):
-    # 100 was NUM_BATCHES
-    for i in range(100):
+    for i in range(NUM_BATCHES):
         doc, label = train_pairs[i]
 
         if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
-        train_step.run(feed_dict={x: doc, y: label})
-             
-        
-        print("====== gradient values =====")
-        
-        ind = tf.argmin(probs, dimension=0)
-        index = ind.eval(feed_dict={x: doc, y: label})
-        # pdb.set_trace()
+        _, ent, ps = session.run([train_step, cross_entropy, probs], feed_dict={x: doc, y: label})
+
+        index = np.argmin(ps)
         list_ = [0, 0]
         list_[index] = 1
+        doc_summaries += list_
 
-        #pdb.set_trace()  
+        aps = argmax(ps)
+        apl = argmax(label)
+        cor = float(aps == apl)
 
-        #pdb.set_trace()
-
-        acc_accum += accuracy.eval(feed_dict={x: doc, y: label})
+        acc_accum += cor
+        ent_accum += ent
         counter += 1
 
         if counter % 100 == 0:
-            print ('step', counter, 'accuracy:', acc_accum / counter)
+            acc_total += acc_accum
+            print ('step', counter, 'avg accuracy:', acc_total / counter, 'this accuracy:', acc_accum / 100, 'entropy:', ent_accum / counter)
+            acc_accum = 0.0
+
+
 
 print('final train step', counter, 'accuracy:', acc_accum / counter)
 
@@ -211,12 +205,14 @@ test_acc_accum = 0
 test_counter = 1
 SUMMARY_LENGTH = 2
 
+
+
 for i in range(TEST_NUM_BATCHES):
     doc, label, words = test_triples[i]
     if len(doc) < SENTENCE_K or len(doc[0]) < WORD_K: continue
 
     if summary:
-        grad_vals = session.run(gradients, feed_dict={x: doc, y: list_})
+        grad_vals = session.run(gradients, feed_dict={x: doc, y: doc_summaries[i]})
         grad_vals = tf.reduce_sum(tf.abs(grad_vals[0]), 1)
         _, idx = tf.nn.top_k(grad_vals, k=SUMMARY_LENGTH, sorted=False)
         print("--- full document ---")
@@ -226,16 +222,14 @@ for i in range(TEST_NUM_BATCHES):
         print(" ".join(words[sorted_indices[0]]))
         print(" ".join(words[sorted_indices[1]]))
     else:
-        test_acc_accum += session.run([accuracy], feed_dict={x: doc, y: label})[0]
+        ps = session.run(probs, feed_dict={x: doc, y: label})
+        aps = argmax(ps)
+        apl = argmax(label)
+        cor = 1.0 if aps == apl else 0.0
+        test_acc_accum += cor
         test_counter += 1
         if test_counter % 100 == 0:
             print ('step', test_counter, 'accuracy:', test_acc_accum / test_counter)
 
 if not summary:
     print ('final test step', test_counter, 'accuracy:', test_acc_accum / test_counter)
-
-
-
-
-
-

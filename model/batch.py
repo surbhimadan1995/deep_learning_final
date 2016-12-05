@@ -14,13 +14,17 @@ import re
 from collections import defaultdict
 import pdb
 import numpy as np
+import random
 
 '''
 Returns list of lines for the file passed in
 '''
-def read_data(file_name):
+def read_data(file_name, keep=None):
     with open(file_name) as f:
         docs = f.readlines()
+        if keep is not None:
+            random.shuffle(docs)
+            docs = docs[:keep]
     return docs
 
 def basic_tokenizer(sentence, word_split=re.compile("([.,!?\"':;)(])")):
@@ -210,10 +214,10 @@ def convert_docs_to_ints(word_ids, docs):
         ** labels:  [0, 1] represents positive review
                     [1, 0] represents negative review
 '''
-#POS_REVIEWS_TRAIN = '../data/train_pos'
-#NEG_REVIEWS_TRAIN = '../data/train_neg'
-POS_REVIEWS_TRAIN = '../data/beverly_pos'
-NEG_REVIEWS_TRAIN = '../data/beverly_neg'
+POS_REVIEWS_TRAIN = '../data/train_pos'
+NEG_REVIEWS_TRAIN = '../data/train_neg'
+# POS_REVIEWS_TRAIN = '../data/beverly_pos'
+# NEG_REVIEWS_TRAIN = '../data/beverly_neg'
 def get_imdb_data():
     positive = read_data(POS_REVIEWS_TRAIN)
     negative = read_data(NEG_REVIEWS_TRAIN)
@@ -226,13 +230,13 @@ def get_imdb_data():
     # add 1 to len(word_ids) to account for STOP
     return len(word_ids)+1, docs, int_docs, labels, word_ids
 
-#POS_REVIEWS_TEST = '../data/test_pos'
-#NEG_REVIEWS_TEST = '../data/test_neg'
+# POS_REVIEWS_TEST = '../data/test_pos'
+# NEG_REVIEWS_TEST = '../data/test_neg'
 POS_REVIEWS_TEST = '../data/small_test_pos'
 NEG_REVIEWS_TEST = '../data/small_test_neg'
 def get_imdb_test_data(word_ids):
-    positive = read_data(POS_REVIEWS_TEST)
-    negative = read_data(NEG_REVIEWS_TEST)
+    positive = read_data(POS_REVIEWS_TEST, keep=3000)
+    negative = read_data(NEG_REVIEWS_TEST, keep=3000)
 
     # [0, 1] represents positive review, [1, 0] represents negative review
     labels = [[0, 1]] * len(positive) + [[1, 0]] * len(negative)
